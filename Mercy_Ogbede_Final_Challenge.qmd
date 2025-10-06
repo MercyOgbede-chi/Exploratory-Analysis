@@ -1,0 +1,353 @@
+---
+title: "Final challenge"
+author: "Mercy Ogbede"
+description: ""
+date: last-modified
+format: 
+  html: 
+    embed-resources: true
+    self-contained-math: true
+
+---
+
+#1 Description of CO2 Emission(primary data)
+
+The data for this final project is CO2 emission data (total emissions from direct fuel use in residential, commercial, industrial, and transportation sectors). It is the total annual CO2 emissions in million metric tons from the year 1970 to 2021 in the 50 states and the District of Columbia of the United States of America. The data was sourced from the U.S. Energy Information Administration: (https://www.eia.gov/environment/emissions/state/), and were collected through surveys, information drawn from metering systems, and reports from energy producers and distributors as well as agencies such as the Federal Energy Regulatory Commission (FERC). The cases in this data are the different states in the United States representing each row in the the data and the columns representing total CO2 emission for each year by states.
+
+There is additional dataset that's sourced from the US Census Bureau for 2020 Population Census data https://www.census.gov/library/visualizations/interactive/2020-population-and-housing-state-data.html. It's the summary of the 2020 census data for the 50 states of the US and the District of Columbia. The columns are the State and Population.
+
+
+
+
+#2 Exploratory data analysis
+#Here, I will analyze the data to understand the distribution of emissions over time and states or regions. This will help me identify any trends, and highlight key patterns in the data.
+
+First, it will be appropriate to understand the mean and standard deviation of CO2 emission, this will help reveal the state with the highest and lowest average CO2 emission
+
+  )
+```{r}
+#load the tidyverse library which contains the ggplot2
+library(tidyverse)
+#load the data
+CO2_emission <- read.csv("CO2_emission.csv")
+
+#sanity check
+head(CO2_emission)
+
+# Remove the "X" prefix from the year columns
+names(CO2_emission) <- sub("^X", "", names(CO2_emission))
+
+
+CO2_emission_long <- CO2_emission |>
+  pivot_longer(cols = -State, names_to = "Year", values_to = "CO2_Emissions") |>
+  mutate(Year = as.numeric(Year))
+
+head(CO2_emission_long)
+
+# Summary statistics for the dataset
+CO2_emission_summary <- CO2_emission_long |>
+  group_by(State) |>
+  summarise(
+    Min_Emissions = min(CO2_Emissions, na.rm = TRUE),
+    Max_Emissions = max(CO2_Emissions, na.rm = TRUE),
+    Mean_Emissions = mean(CO2_Emissions, na.rm = TRUE),
+    SD_Emissions = sd(CO2_Emissions, na.rm = TRUE)
+  )
+
+#
+head(CO2_emission_summary)
+
+
+```
+#From the data, we can proceed to plotting the mean and standard deviation to better visualize the trends in average CO2 emission per state
+
+```{r}
+# Plotting the mean CO2 emissions with standard deviation using geom_line
+ggplot(CO2_emission_summary, aes(x = reorder(State, Mean_Emissions), y = Mean_Emissions, group = 1)) +
+  geom_line() +
+  geom_point() +
+  geom_errorbar(aes(ymin = Mean_Emissions - SD_Emissions, ymax = Mean_Emissions + SD_Emissions), width = 0.2) +
+  labs(title = "Average CO2 emissions by State", 
+       x = "State", 
+       y = "Mean CO2 emissions (million metric tons)") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
+  scale_y_continuous(breaks = seq(0, 800, by = 50))
+```
+
+#The plot shows that Texas has the highest average CO2 emission, followed by California, Pennsylvania and Ohio, while on the lower end, District of Columbia has the lowest average CO2 emission, followed by Vermont, Rhode Island and South Dakota.
+
+#Furthermore, we can explore any of the regions. As an example, I will be exploring the CO2 emission in New England to see which among the state emits more CO2 than others.
+```{r}
+# Plot CO2 emissions trends for six New England states
+Northeast_states <- c("Massachusetts", "Connecticut", "New Hampshire", "Rhode Island", "Vermont", "Maine")
+
+
+ggplot(data = filter(CO2_emission_long, State %in% Northeast_states), aes(x = Year, y = CO2_Emissions, color = State)) +
+  geom_line(size = 1.2) +
+  labs(title = "CO2 emissions trends (1970-2021) in New England", 
+       x = "Year", 
+       y = "CO2 Emissions (million metric tons )") +
+  theme_minimal() + 
+  scale_x_continuous(breaks = seq(min(CO2_emission_long$Year), max(CO2_emission_long$Year), by = 2)) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) + 
+  scale_y_continuous(breaks = seq(0, 150, by = 10))
+
+```
+
+#From the above result, among all the six states in New England, Massachusetts emitted more average CO2 from 1970 to 2021, with its peak being in 1972 and lowest being in 2020. Although Massachusetts' emission continued to decrease over the years, it still ranked the highest emitter of CO2 in New England. Connecticut, however, remained the lowest emitter of CO2 throughout the years reported. In fact, the CO2 emission in Connecticut remained relatively the same throughout the years (1970 to 2021). This is floowed by Rhode Island, which ranked the second lowest in terms of average CO2 emission per year.
+
+#The above descriptive analysis considered the states, in the following analysis, I will look at year-based analysis. This will allow me check for year(s) that recorded the highest or lowest total CO2 emission across the states.
+```{r}
+
+# Calculating summary statistics for each year
+CO2_emission_year_summary <- CO2_emission_long |>
+  group_by(Year) |>
+  summarise(
+    Min_Emissions = min(CO2_Emissions, na.rm = TRUE),
+    Max_Emissions = max(CO2_Emissions, na.rm = TRUE),
+    Mean_Emissions = mean(CO2_Emissions, na.rm = TRUE),
+    SD_Emissions = sd(CO2_Emissions, na.rm = TRUE)
+  )
+
+# Check the summary statistics
+head(CO2_emission_year_summary)
+
+```
+```{r}
+# Plotting the average CO2 emissions over time, i.e the average yearly CO2 emissions across all states. The standard deviations are too large, making the error bars distracting. Therefore, only the means are plotted.
+ggplot(CO2_emission_year_summary, aes(x = Year, y = Mean_Emissions)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Average CO2 emissions by Year", 
+       x = "Year", 
+       y = "Average CO2 emissions (million metric tons)") +
+  theme_minimal() + scale_x_continuous(breaks = seq(min(CO2_emission_year_summary$Year), max(CO2_emission_year_summary$Year), by = 2)) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+  scale_y_continuous(breaks = seq(80, 120, by = 5), limits = c(80, 120))
+
+```
+# From the above data plot, we can see that the least total (average) CO2 emission for the whole states was recorded in 1970, while the highest average CO2 emission was recorded in 2005 and 2007. The CO2 emission continued to increase from 1970 to 2007, though not consistently as it decreased sharply between 1974 and 1975, and again between 1980 and 1983, when it then began to increase till 2007. After 2007, the emission started decreasing again till 2020. As of 2021, the CO2 emmission was higher than the 2020 data and there's no available data to undertand if this increase has been consistent or not, since 2022.
+
+
+
+#3 Question-driven descriptive analysis
+#3a. Is there a correlation between CO2 emission and population size? 
+#Here I will analyze CO2 emission over the years in three most populous states of California, Texas, and Florida and compare the data with three least populous states of Wyoming, Vermont and District of Columbia, and determine if population size correlate with CO2 emission. The population of each state will be from the US Census Burea for 2020 Population Census data.
+```{r}
+# Load the reshape2 library to make it easy to transform data between wide and long
+library(reshape2)
+
+# Define the most and least populous states
+most_populous_states <- c("California", "Texas", "Florida")
+least_populous_states <- c("Wyoming", "Vermont", "District of Columbia")
+
+# Filter the data for these specified states
+selected_states <- c(most_populous_states, least_populous_states)
+filtered_data <- CO2_emission[CO2_emission$State %in% selected_states, ]
+
+# Reshape the data for visualization
+melted_data <- melt(filtered_data, id.vars = "State", variable.name = "Year", value.name = "CO2_Emissions")
+melted_data$Year <- as.numeric(as.character(melted_data$Year))
+
+# Add a column to distinguish between most and least populous states
+melted_data$Population_Category <- ifelse(melted_data$State %in% most_populous_states, "Most Populous", "Least Populous")
+
+# Plot CO2 emissions over time for the selected states
+ggplot(melted_data, aes(x = Year, y = CO2_Emissions, color = State, linetype = Population_Category)) + geom_line(size = 1) +
+  labs(title = "CO2 Emissions over time in most and least populous states",
+       x = "Year",
+       y = "CO2 emissions (million metric tons)") +
+  scale_color_manual(values = c("California" = "red", "Texas" = "darkblue", "Florida" = "darkgreen", "Wyoming" = "purple", "Vermont" = "orange", "District of Columbia" = "brown")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+  scale_y_continuous(breaks = seq(0, 700, by = 50))
+```
+#Looking at the plot, we can see that the least populous states (Wyoming, Vermont and District of Columbia) generated the least CO2, while the most populous states (California, Texas and Florida) had the largest CO2 emission. However, when we look into the data more carefully, we can see that even though California has more population than Texas, Texas still generated more CO2 than California. Therefore, we can't be sure that population size correlates with CO2 emission, and thus there may be other factors that contribute to CO2 emission apart from population size. I will run a correlation analysis for statistical confirmation.
+
+##Now, running the correlation analysis; given the population of California: 39,538,223; Texas: 29,145,505; Florida: 21,538,187; Wyoming: 576,851; Vermont: 643,077 and District of Columbia: 689,545, I will calculate the statistical correlation as follows:
+
+```{r}
+# Define the population sizes for the selected states
+population_data <- data.frame(
+  State = c("California", "Texas", "Florida", "Wyoming", "Vermont", "District of Columbia"),
+  Population = c(39538223, 29145505, 21538187, 576851, 643077, 689545))
+
+# Reshape the CO2 emission data
+melted_data <- melt(CO2_emission, id.vars = "State", variable.name = "Year", value.name = "CO2_emission_reshaped")
+#convert the year column to numeric
+melted_data$Year <- as.numeric(as.character(melted_data$Year))
+
+# Calculate the average CO2 emissions for each state across all years
+Average_CO2_emission <- melted_data %>%
+  group_by(State) %>%
+  summarize(Average_CO2_emission = mean(CO2_emission_reshaped, na.rm = TRUE))
+
+# Merge the average CO2 emissions with the population data
+correlation_data <- merge(Average_CO2_emission, population_data, by = "State")
+
+# Convert Population column to numeric
+correlation_data$Population <- as.numeric(correlation_data$Population)
+
+# Sanity check
+head(correlation_data)
+
+# Calculate the correlation between average CO2 emissions and population size
+correlation_value <- cor(correlation_data$Average_CO2_emission, correlation_data$Population)
+
+# Print the correlation value
+print(correlation_value)
+
+```
+#From above, the statistical correlation between average CO2 emission and population size using the three most populous and three least populous states is 0.85. This indicates a strong positive correlation, suggesting that as the population size increases, CO2 emissions also tend to increase in these states.
+
+#We can also take a look to see if the population size correlate with CO2 emission in all the US states, and not just the selected states
+
+```{r}
+# Load the state population dataset
+state_population <- read.csv("state_population.csv")
+
+# Clean the population data by removing commas and converting to numeric
+state_population$Population <- as.numeric(gsub(",", "", state_population$Population))
+
+# Reshape the CO2_emission data (if not already done)
+melted_data <- reshape2::melt(CO2_emission, id.vars = "State", variable.name = "Year", value.name = "CO2_emission_reshaped")
+
+# Convert the Year column to numeric
+melted_data$Year <- as.numeric(as.character(melted_data$Year))
+
+# Calculate the average CO2 emissions for each state across all years
+Average_CO2_emission_all <- melted_data %>%
+  group_by(State) %>%
+  summarize(Average_CO2_emission = mean(CO2_emission_reshaped, na.rm = TRUE))
+
+# Merge the average CO2 emissions with the population data
+correlation_data_all <- merge(Average_CO2_emission_all, state_population, by = "State")
+
+# Convert Population column to numeric
+correlation_data_all$Population <- as.numeric(correlation_data_all$Population)
+
+# Sanity check
+head(correlation_data_all)
+
+# Calculate the correlation between average CO2 emissions and population size
+correlation_value_all <- cor(correlation_data_all$Average_CO2_emission, correlation_data_all$Population)
+
+# Print the correlation value
+print(correlation_value_all)
+
+
+```
+#Interestingly, when the CO2 emission in the whole states are compared, the correlation between population size and CO2 emission is 0.86, which still shows that there is a strong positive association between population size and CO2 emission. Hovever, other factors such as industry and crude oil production may affect CO2 emission.
+
+#Question-driven descriptive analsysis 3b: Does crude oil production significally influence the level of CO2 emission?
+#According to the U.S. Energy Information Administration, five states of the US are major oil producers at least from 2011 to 2021: Texas, New Mexico, North Dakota, Colorado, and Alaska. On the other hand, no oil exploration occurs in some other states including Washington, Oregon, Minnesota, Iowa and Georgia. Here, I want to compare CO2 emission between states with the highest petroleum oil production and states with no records of oil exploration. This will help me understand if there is an influence.
+
+```{r}
+# Define the states with the highest oil production and those with no oil exploration
+high_oil_production_states <- c("Texas", "New Mexico", "North Dakota", "Colorado", "Alaska")
+no_oil_exploration_states <- c("Washington", "Oregon", "Minnesota", "Iowa", "Georgia")
+
+# Filter the data for these specified states
+selected_states_oil <- c(high_oil_production_states, no_oil_exploration_states)
+filtered_data_oil <- CO2_emission[CO2_emission$State %in% selected_states_oil, ]
+
+# Reshape the data
+melted_data_oil <- melt(filtered_data_oil, id.vars = "State", variable.name = "Year", value.name = "CO2_emission_reshaped_oil")
+melted_data_oil$Year <- as.numeric(as.character(melted_data_oil$Year))
+
+# Add a column to distinguish between high oil production states and no oil exploration states
+melted_data_oil$Oil_Production_Category <- ifelse(melted_data_oil$State %in% high_oil_production_states, "High Oil Production", "No Oil Exploration")
+
+head(melted_data_oil)
+
+# Plotting CO2 emission over time for the selected states
+ggplot(melted_data_oil, aes(x = Year, y = CO2_emission_reshaped_oil, color = State, linetype = Oil_Production_Category)) + 
+  geom_line(size = 1) +
+  labs(title = "CO2 emissions over time in oil production vs. non-oil states",
+       x = "Year",
+       y = "CO2 emissions (million metric tons)") + 
+  scale_color_manual(values = c("Texas" = "red", "New Mexico" = "darkblue", "North Dakota" = "darkgreen", "Colorado" = "purple", "Alaska" = "orange", "Washington" = "brown", "Iowa" = "black", "Georgia" = "grey", "Minnesota" = "violet", "Oregon" = "lightblue")) +
+  theme_minimal() + scale_x_continuous(breaks = seq(min(melted_data_oil$Year), max(melted_data_oil$Year), by = 4)) + scale_y_continuous(breaks = seq(0, 700, by = 50)) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+
+```
+#From the result above, although Texas which is the highest crude oil producer also has the highest CO2 emission among the ten states, Georgia which is not an oil producing state emitted more CO2 than New Mexica, Colorado, North Dakota and Alaska which are oil producers. Also, Minnesota produced more CO2 than Alaska and North Dakota. This shows that being an oil producer may not translate to higher CO2 emission as other factors such manufecturing industry and environmental sustainability programs may also play a role. Also from above, a combination of factors including population size may play a major role. However, to be sure, I will need to calculate the statistical correlation below:
+
+```{r}
+# Add a column so that high oil production states = 1 and no oil production states = 0
+melted_data_oil$Oil_Production_Category <- ifelse(melted_data_oil$State %in% high_oil_production_states, 1, 0)
+
+# Calculating the average CO2 emissions for each state
+Average_CO2_emission_oil <- melted_data_oil |>
+  group_by(State, Oil_Production_Category) |>
+  summarize(Average_CO2_emission = mean(CO2_emission_reshaped_oil, na.rm = TRUE))
+
+# Calculate the correlation between being a high oil producer (1) and CO2 emissions
+correlation_value_oil <- cor(Average_CO2_emission_oil$Oil_Production_Category, Average_CO2_emission_oil$Average_CO2_emission)
+
+# Print the correlation value
+print(correlation_value_oil)
+
+
+
+
+```
+
+
+```{r}
+# The correlation can also be visualized to show the relationship with a scatter plot
+ggplot(Average_CO2_emission_oil, aes(x = Oil_Production_Category, y = Average_CO2_emission)) +
+  geom_point(aes(color = State), size = 3) +
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +
+  labs(title = "Correlation between High Oil Production and CO2 Emissions",
+       x = "Oil Production (1 = High, 0 = None)",
+       y = "Average CO2 Emissions (million metric tons)") +
+  theme_minimal()
+
+```
+
+#From above, we can see that the correlation coefficient is 0.24, indicating a weak positive correlation. Therefore, we can conclude that being a high oil producing state is weakly or (probably not) related to more CO2 emission.
+
+#Critical reflection
+Through the various analyses that I conducted in this project, I learned the following about CO2 emission in the US from 1970 to 2021
+
+Population Size and CO2 Emissions: There is a strong positive correlation between population size and CO2 emissions. This suggests that larger populations generally contribute to higher CO2 emissions, likely due to increased energy consumption across residential, commercial, industrial, and transportation sectors.
+
+Impact of Oil Production on CO2 Emissions: The analysis revealed a weak positive correlation between being a high oil producer and CO2 emissions. While Texas, the largest oil producer, has the highest CO2 emissions, other non-oil-producing states like Georgia and Minnesota emitted more CO2 than some oil-producing states. This indicates that factors other than oil production, such as industrial activity, energy policies, and population size, play significant roles in determining CO2 emissions.
+
+#Limitation of the dataset:
+The dataset combined CO2 emissions from residential, commercial, industrial, and transportation sectors, making it difficult to determine which sectors contribute most to the CO2 emissions. Sector-specific data would allow for a more detailed analysis and knowledge of CO2 emissions.
+Also, the data did not include more recent data such as 2022 and 2023, which would have showed CO2 emission post-COVID pandemic to see if the lock-down affected CO2 emission.
+
+#Lessons Learned
+I was able to learn how to think more critically especially concerning the question-driven data analysis which will eventually help me in my data science career. I also learned more about proper data cleaning and handling, and use of some more functions in ggplot2
+Finally, data visualization is an exciting aspect that I enjoyed as it gave me the opportunity to see my research questions (question-driven) to be more practical. Visualizing data through plots and graphs was essential for identifying trends. I also learned and appreciated the fact that effective data visualizations is important for communicating simple and complex information more clearly to a broader audience.
+
+In summary, this project provided analysis of CO2 emissions across the United States, revealing the relationships or correlations between population size, crude oil production, and CO2 emissions. The findings from this kind of data exploration will usually inform policies aimed at reducing carbon emission and mitigating climate change.
+
+#Bibliography
+
+Chan, B. K., & Chan, B. K. (2018). Data analysis using R programming. Biostatistics for Human Genetic Epidemiology, 47-122.
+
+U.S Energy Information Administration (2023). State Carbon Dioxide Emissions Data. https://www.eia.gov/environment/emissions/state/index.php. Accessed 18 Aug. 2024.
+
+
+U.S Energy Information Administration (2023). Petroleum Supply Annual, Volume 1, Table 14, August 2023. https://www.eia.gov/energyexplained/oil-and-petroleum-products/where-our-oil-comes-from.php. Accessed August 18, 2024.
+
+
+U.S Energy Information Administration (2024). Petroleum and Other Liquids. https://www.eia.gov/petroleum/. Accessed August 18, 2024.
+
+United States Census Burea (2021). 2020 Population and Housing State Data. https://www.census.gov/library/visualizations/interactive/2020-population-and-housing-state-data.html. Accessed August 17, 2024
+
+Wickham, H., Çetinkaya-Rundel, M., & Grolemund, G (2023). R for Data Science. Second Edition. O'Reilly Media Inc, California.
+```
+
+
+
+
+
+
+
+
+
